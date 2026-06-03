@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gotham Grit - Batman Habit Tracker & To-Do</title>
+  <meta name="description" content="A premium Batman-themed daily habit tracker and to-do application. Secure Gotham objectives, maintain your patrol streak, and activate the Vengeance Protocol.">
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Celebration Layers -->
+  <canvas id="celebration-canvas"></canvas>
+  
+  <div id="celebration-overlay">
+    <div class="signal-spotlight"></div>
+    <div class="overlay-content">
+      <div class="overlay-logo">
+        <svg viewBox="0 0 600 300">
+          <path d="M 256,213 C 245,181 206,187 234,262 147,181 169,71.2 233,18 220,56 235,81 283,88 285,78.7 286,69.3 288,60 289,61.3 290,62.7 291,64 291,64 297,63 300,63 303,63 309,64 309,64 310,62.7 311,61.3 312,60 314,69.3 315,78.7 317,88 365,82 380,56 367,18 431,71 453,181 366,262 394,187 356,181 344,213 328,185 309,184 300,284 291,184 272,185 256,213 Z" />
+        </svg>
+      </div>
+      <h1 class="overlay-title">MISSION REPORT</h1>
+      
+      <!-- Mission Report Dashboard -->
+      <div class="mission-report-dashboard" id="mission-report-dashboard">
+        <div class="report-row">
+          <div class="report-label">OBJECTIVES COMPLETED:</div>
+          <div class="report-value" id="mr-objectives">0</div>
+        </div>
+        <div class="report-row">
+          <div class="report-label">XP EARNED:</div>
+          <div class="report-value" id="mr-xp">0</div>
+        </div>
+        <div class="report-row">
+          <div class="report-label">STAT INCREASES:</div>
+          <div class="report-value stat-gains" id="mr-stats">--</div>
+        </div>
+        <div class="report-row">
+          <div class="report-label">CURRENT STREAK:</div>
+          <div class="report-value" id="mr-streak">0 DAYS</div>
+        </div>
+        <div class="report-row report-status">
+          <div class="report-label">STATUS:</div>
+          <div class="report-value highlight">BETTER THAN YESTERDAY</div>
+        </div>
+      </div>
+      
+      <button class="overlay-btn" id="btn-overlay-close">Resume Patrol</button>
+    </div>
+  </div>
+
+  <!-- Main Application -->
+  <div class="app-container">
+    
+    <!-- Top HUD Header -->
+    <header class="hud-header">
+      <div class="hud-title-container">
+        <div class="hud-tag">Sys.Util // Vengeance.Core</div>
+        <h1 class="hud-title" id="main-title">
+          <i class="fa-solid fa-mask"></i> Gotham <span>Grit</span>
+        </h1>
+      </div>
+      
+      <!-- Random Batman Quote HUD -->
+      <div class="quote-panel" id="quote-container">
+        <span id="quote-text">"Why do we fall? So that we can learn to pick ourselves up."</span>
+        <span class="quote-author" id="quote-author">— Alfred Pennyworth</span>
+      </div>
+
+      <!-- Settings & Utilities -->
+      <div class="system-controls">
+        <button id="btn-sound" class="control-btn">
+          <i class="fa-solid fa-volume-high" id="sound-icon"></i> <span id="sound-text">SOUND ON</span>
+        </button>
+        <button id="btn-reboot" class="control-btn">
+          <i class="fa-solid fa-arrows-rotate"></i> REBOOT PATROL
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Dashboard Grid -->
+    <main class="dashboard-grid">
+      
+      <!-- Left Column Wrapper -->
+      <div class="hud-left-wrapper" style="display: flex; flex-direction: column; gap: 2rem;">
+        
+        <!-- Left Column: Terminal Card (Tasks List) -->
+      <section class="bat-card" id="terminal-section">
+        <div class="card-title-hud">
+          <span>Active Objectives</span>
+          <span class="counter-tag" id="task-counter">0/0 SECURED</span>
+        </div>
+
+        <!-- Add Task Input Form -->
+        <form class="task-form" id="todo-form">
+          <div class="task-input-wrapper">
+            <input type="text" class="task-input" id="task-input" placeholder="INITIATE NEW OBJECTIVE..." autocomplete="off" required>
+            <i class="fa-solid fa-terminal task-input-icon"></i>
+          </div>
+          <!-- RPG Skill Category Select -->
+          <select class="task-category-select" id="task-category" required>
+            <option value="mind">🧠 MIND (Read/Study)</option>
+            <option value="body">⚡ BODY (Workout/Run)</option>
+            <option value="discipline">🛡️ DISCIPLINE (Focus/Habit)</option>
+            <option value="career">💻 CAREER (Code/Work)</option>
+          </select>
+          <button type="submit" class="btn-add-task">
+            <i class="fa-solid fa-plus"></i> SECURE
+          </button>
+        </form>
+
+        <!-- Dynamic List of Tasks -->
+        <ul class="task-list" id="todo-list">
+          <!-- Dynamically populated -->
+        </ul>
+
+        <!-- Empty State Placeholder -->
+        <div class="empty-state" id="empty-state">
+          <div class="empty-state-logo-wrapper">
+            <svg viewBox="0 0 600 300" class="empty-state-svg">
+              <path d="M 256,213 C 245,181 206,187 234,262 147,181 169,71.2 233,18 220,56 235,81 283,88 285,78.7 286,69.3 288,60 289,61.3 290,62.7 291,64 291,64 297,63 300,63 303,63 309,64 309,64 310,62.7 311,61.3 312,60 314,69.3 315,78.7 317,88 365,82 380,56 367,18 431,71 453,181 366,262 394,187 356,181 344,213 328,185 309,184 300,284 291,184 272,185 256,213 Z" />
+            </svg>
+          </div>
+          <h2 class="empty-state-title">NO ACTIVE OBJECTIVES</h2>
+          <p class="empty-state-welcome">Welcome to Gotham Grit.</p>
+          <p class="empty-state-subtitle">Every legend begins with a single mission. Create your first objective and start forging a stronger version of yourself.</p>
+          
+          <div class="suggested-missions">
+            <span class="suggested-header">Suggested Missions:</span>
+            <div class="missions-grid">
+              <button type="button" class="mission-pill" data-mission="Read 10 Pages" data-category="mind">
+                <span class="mission-icon">📚</span> Read 10 Pages
+              </button>
+              <button type="button" class="mission-pill" data-mission="Workout 20 Minutes" data-category="body">
+                <span class="mission-icon">💪</span> Workout 20 Minutes
+              </button>
+              <button type="button" class="mission-pill" data-mission="Study Programming" data-category="career">
+                <span class="mission-icon">💻</span> Study Programming
+              </button>
+              <button type="button" class="mission-pill" data-mission="Take a Walk" data-category="discipline">
+                <span class="mission-icon">🚶</span> Take a Walk
+              </button>
+            </div>
+          </div>
+          
+          <button type="button" class="btn-initiate-patrol" id="btn-initiate-patrol">
+            [ Initiate First Objective ]
+          </button>
+        </div>
+      </section>
+
+      <!-- Terminal Quote Feed -->
+      <div class="terminal-quote-feed" id="terminal-quote-container" title="Click to cycle decrypting logs">
+        <div class="terminal-quote-header">
+          <span class="terminal-pulse-dot"></span>
+          <span class="terminal-quote-title">BATCOMPUTER // DAILY.LOGS</span>
+        </div>
+        <div class="terminal-quote-content">
+          <p id="terminal-quote-text">"Fear is a tool. When that light hits the sky, it's not just a call-out. It's a warning."</p>
+          <p id="terminal-quote-author">— Batman</p>
+        </div>
+      </div>
+
+      <!-- Vigilante Skill Tree Section -->
+      <section class="bat-card" id="skill-tree-section">
+        <div class="card-title-hud">
+          <span>Vigilante Skill Tree</span>
+          <span class="counter-tag">SYS.STATS</span>
+        </div>
+        <div class="skills-container" id="skills-container">
+          <!-- Dynamically populated in JS -->
+        </div>
+      </section>
+
+      </div> <!-- End Left Column Wrapper -->
+
+      <!-- Right Column Wrapper (HUD core panels) -->
+      <div class="hud-right-wrapper">
+        
+        <!-- Bat-Signal Core (Progress representation) -->
+        <section class="bat-card" id="core-section" style="display: flex; align-items: center; justify-content: center; flex: 1;">
+          <div class="signal-panel">
+            <div class="card-title-hud" style="width: 100%; text-align: center; border-bottom: none; margin-bottom: 0.5rem;">
+              <span style="margin: 0 auto;">Bat-Signal Sync Core</span>
+            </div>
+            
+            <!-- Circular HUD Signal housing -->
+            <div class="signal-housing">
+              <div class="hud-ring-1"></div>
+              <div class="hud-ring-2"></div>
+              <div class="hud-ring-3"></div>
+              
+              <!-- SVG Batman Logo with Gradual fill -->
+              <div class="batman-logo-container" id="logo-container">
+                <svg viewBox="0 0 600 300" class="batman-svg" id="batman-svg">
+                  <defs>
+                    <!-- We fill bottom-up dynamically in JS by adjusting offsets -->
+                    <linearGradient id="bat-fill" x1="0%" y1="100%" x2="0%" y2="0%">
+                      <stop offset="0%" stop-color="#ffb300" id="fill-stop-1" />
+                      <stop offset="0%" stop-color="transparent" id="fill-stop-2" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M 256,213 C 245,181 206,187 234,262 147,181 169,71.2 233,18 220,56 235,81 283,88 285,78.7 286,69.3 288,60 289,61.3 290,62.7 291,64 291,64 297,63 300,63 303,63 309,64 309,64 310,62.7 311,61.3 312,60 314,69.3 315,78.7 317,88 365,82 380,56 367,18 431,71 453,181 366,262 394,187 356,181 344,213 328,185 309,184 300,284 291,184 272,185 256,213 Z"
+                        fill="url(#bat-fill)" stroke="#ffb300" stroke-width="3" stroke-linejoin="round" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Bottom Sync Readouts -->
+            <div class="sync-status">
+              <div class="sync-percentage" id="sync-percentage">0%</div>
+              <div class="sync-label" id="sync-label">SYSTEM CORE STANDBY</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Patrol Tracker & Log Panel -->
+        <section class="bat-card" id="patrol-log-section">
+          <div class="card-title-hud">
+            <span>Patrol Tracker & Log</span>
+            <span class="counter-tag">SYS.CLOCK</span>
+          </div>
+
+          <!-- Countdown Timer Widget -->
+          <div class="countdown-widget" style="margin-bottom: 1.5rem;">
+            <div style="font-family: var(--font-hud); font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 2px; text-align: center; margin-bottom: 4px;">TIME REMAINING FOR TODAY'S PATROL</div>
+            <div class="countdown-timer-box" id="patrol-countdown">23:59:59</div>
+          </div>
+
+          <!-- Calendar Widget -->
+          <div class="calendar-widget">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <button id="btn-prev-month" class="cal-btn"><i class="fa-solid fa-chevron-left"></i></button>
+              <span id="calendar-month-year" style="font-family: var(--font-hud); font-size: 0.85rem; font-weight: 700; color: #fff; letter-spacing: 1px; text-transform: uppercase;">JUNE 2026</span>
+              <button id="btn-next-month" class="cal-btn"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 8px; font-family: var(--font-hud); font-weight: bold; letter-spacing: 1px;">
+              <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+            </div>
+            <div id="calendar-days-grid" class="cal-grid-days">
+              <!-- Dynamically rendered days -->
+            </div>
+          </div>
+
+          <!-- Calendar Status Legend -->
+          <div style="display: flex; justify-content: space-around; font-size: 0.7rem; margin-top: 15px; font-family: var(--font-hud); letter-spacing: 1px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: var(--color-yellow); box-shadow: 0 0 5px var(--color-yellow);"></span> SECURED
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #ff3333; box-shadow: 0 0 5px #ff3333;"></span> MISSED
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);"></span> NO ACTIVITY
+            </div>
+          </div>
+        </section>
+
+        <!-- Batcomputer Analytics Section -->
+        <section class="bat-card" id="analytics-section">
+          <div class="card-title-hud">
+            <span>Batcomputer Analytics</span>
+            <span class="counter-tag">OVERALL HISTORY</span>
+          </div>
+
+          <div class="analytics-grid">
+            <div class="analytics-stat">
+              <div class="analytics-label">TOTAL PATROLS</div>
+              <div class="analytics-value" id="analytics-total-days">0</div>
+            </div>
+            <div class="analytics-stat">
+              <div class="analytics-label">SUCCESSFUL</div>
+              <div class="analytics-value" id="analytics-success-days">0</div>
+            </div>
+            <div class="analytics-stat">
+              <div class="analytics-label">WIN RATE</div>
+              <div class="analytics-value" id="analytics-win-rate">0%</div>
+            </div>
+            <div class="analytics-stat">
+              <div class="analytics-label">TOTAL XP GAINED</div>
+              <div class="analytics-value highlight-xp" id="analytics-total-xp">0</div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+    </main>
+
+    <!-- Bottom Statistics Bar -->
+    <footer class="stats-footer">
+      <div class="stat-box">
+        <i class="fa-solid fa-fire stat-icon"></i>
+        <div class="stat-info">
+          <div class="stat-value" id="streak-value">0 DAYS</div>
+          <div class="stat-label">PATROL STREAK</div>
+        </div>
+      </div>
+
+      <div class="stat-box">
+        <i class="fa-solid fa-bullseye stat-icon"></i>
+        <div class="stat-info">
+          <div class="stat-value" id="secured-value">0 secured</div>
+          <div class="stat-label">TOTAL OBJECTIVES</div>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Application Controller script (must be ES module for imports) -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
