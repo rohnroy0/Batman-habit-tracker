@@ -220,13 +220,19 @@ body {
 #terminal-section {
   display: flex;
   flex-direction: column;
-  height: auto; /* Adjust height automatically to fit content and prevent cropping */
+  height: 600px; /* Increased to allow full empty state visibility without scrolling */
+}
+
+@media (max-width: 768px) {
+  #terminal-section {
+    height: auto;
+    min-height: 600px;
+  }
 }
 
 #skill-tree-section {
   display: flex;
   flex-direction: column;
-  flex: 1; /* Stretch to fill the remaining height in the left column wrapper */
 }
 
 /* High-tech border trim details */
@@ -281,6 +287,8 @@ body {
   display: flex;
   gap: 10px;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .task-input-wrapper {
@@ -352,7 +360,8 @@ body {
 /* Tasks Lists */
 .task-list {
   list-style: none;
-  max-height: 320px; /* Limits the list height and shows scrollbar if it exceeds this */
+  flex-grow: 1;
+  height: 0;
   overflow-y: auto;
   padding-right: 5px;
 }
@@ -464,6 +473,7 @@ body {
   border: 1px dashed rgba(255, 179, 0, 0.15);
   border-radius: 6px;
   margin-top: 0.25rem;
+  flex-grow: 1;
 }
 
 /* Terminal Quote Feed widget (standalone card) */
@@ -797,10 +807,10 @@ body {
 
 /* Habit Streak Footer Widget */
 .stats-footer {
-  margin-top: 2rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  flex: 1;
 }
 
 .stat-box {
@@ -811,6 +821,7 @@ body {
   display: flex;
   align-items: center;
   gap: 15px;
+  flex: 1;
 }
 
 .stat-icon {
@@ -869,6 +880,20 @@ body {
 
 #celebration-overlay.visible {
   opacity: 1;
+}
+
+.day-report-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(5, 6, 8, 0.95);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
 }
 
 .overlay-content {

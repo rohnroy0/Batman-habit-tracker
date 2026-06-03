@@ -47,7 +47,7 @@ let state = {
   lastCompletedDate: null,
   lastOpenedDate: null,
   soundMuted: false,
-  history: {}, // Key: "YYYY-MM-DD", Value: 'completed' | 'failed'
+  history: {}, // Key: "YYYY-MM-DD", Value: 'completed' | 'failed' | { status: '...', tasks: [] }
   skills: {
     mind: { xp: 0, level: 1 },
     body: { xp: 0, level: 1 },
@@ -55,6 +55,12 @@ let state = {
     career: { xp: 0, level: 1 }
   }
 };
+
+function getHistoryStatus(dateStr) {
+  if (!state.history || !state.history[dateStr]) return null;
+  const entry = state.history[dateStr];
+  return typeof entry === 'string' ? entry : entry.status;
+}
 
 // Initialize State
 function loadState() {
@@ -64,6 +70,8 @@ function loadState() {
       const parsed = JSON.parse(saved);
       state = { ...state, ...parsed };
       if (!state.history) state.history = {};
+      if (state.maxStreak === undefined) state.maxStreak = 0;
+      state.maxStreak = Math.max(state.maxStreak, state.streak || 0);
       if (!state.skills) {
         state.skills = {
           mind: { xp: 0, level: 1 },
@@ -93,23 +101,34 @@ function loadState() {
   if (state.lastOpenedDate && state.lastOpenedDate !== todayStr) {
     // Log previous day status in history before clearing it
     const prevDateStr = state.lastOpenedDate;
-    const totalTasksYesterday = state.tasks.length;
-    const completedTasksYesterday = state.tasks.filter(t => t.completed).length;
+    const tasksYesterday = getTasksForDate(prevDateStr);
+    const totalTasksYesterday = tasksYesterday.length;
+    const completedTasksYesterday = tasksYesterday.filter(t => t.completed).length;
     
     if (totalTasksYesterday > 0) {
-      if (completedTasksYesterday === totalTasksYesterday) {
-        state.history[prevDateStr] = 'completed';
-      } else {
-        state.history[prevDateStr] = 'failed';
-      }
+      const histStatus = completedTasksYesterday === totalTasksYesterday ? 'completed' : 'failed';
+      state.history[prevDateStr] = {
+        status: histStatus,
+        tasks: tasksYesterday.map(t => ({ text: t.text, completed: t.completed, category: t.category }))
+      };
     }
     
     // Check if they maintained their streak yesterday
     const yesterdayStr = getYesterdayString(todayStr);
     if (state.lastCompletedDate !== yesterdayStr && state.lastCompletedDate !== todayStr) {
       state.streak = 0; // missed completing tasks yesterday, streak broken
+    } else if (prevDateStr === yesterdayStr && getHistoryStatus(yesterdayStr) === 'failed') {
+      state.streak = 0; // missed completing tasks yesterday, streak broken
     }
     
+    // Filter out past one-off tasks and uncheck remaining daily/future tasks
+    state.tasks = state.tasks.filter(task => {
+      // Keep if it's a daily habit
+      if (!task.frequency || task.frequency === 'daily') return true;
+      // Keep if it's a one-off task targeted for today or the future
+      return task.targetDate && task.targetDate >= todayStr;
+    });
+
     // Uncheck habits for the new day
     state.tasks.forEach(task => {
       task.completed = false;
@@ -132,10 +151,21 @@ function getTodayString() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function getTomorrowString() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function getYesterdayString(todayStr) {
   const d = new Date(todayStr);
   d.setDate(d.getDate() - 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getTasksForDate(dateStr) {
+  // Legacy tasks without frequency are treated as daily
+  return state.tasks.filter(t => !t.frequency || t.frequency === 'daily' || t.targetDate === dateStr);
 }
 
 function calculateRank(total) {
@@ -166,6 +196,7 @@ const soundText = document.getElementById('sound-text');
 
 const streakValue = document.getElementById('streak-value');
 const securedValue = document.getElementById('secured-value');
+const maxStreakValue = document.getElementById('max-streak-value');
 
 const quoteText = document.getElementById('quote-text');
 const quoteAuthor = document.getElementById('quote-author');
@@ -181,6 +212,12 @@ const celebrationOverlay = document.getElementById('celebration-overlay');
 const btnOverlayClose = document.getElementById('btn-overlay-close');
 const overlayQuoteText = document.getElementById('overlay-quote-text');
 
+// Day Report Overlay
+const dayReportOverlay = document.getElementById('day-report-overlay');
+const dayReportTitle = document.getElementById('day-report-title');
+const dayReportStatus = document.getElementById('day-report-status');
+const btnDayReportClose = document.getElementById('btn-day-report-close');
+
 // Calendar & Timer Elements
 const btnPrevMonth = document.getElementById('btn-prev-month');
 const btnNextMonth = document.getElementById('btn-next-month');
@@ -193,6 +230,7 @@ const armoryGrid = document.getElementById('armory-grid');
 const armoryUnlocksCount = document.getElementById('armory-unlocks-count');
 
 // Skills & Category elements
+const taskFrequencySelect = document.getElementById('task-frequency');
 const taskCategorySelect = document.getElementById('task-category');
 const skillsContainer = document.getElementById('skills-container');
 
@@ -212,12 +250,14 @@ const analyticsTotalXp = document.getElementById('analytics-total-xp');
 function renderTasks() {
   todoList.innerHTML = '';
   
-  if (state.tasks.length === 0) {
+  const todayTasks = getTasksForDate(getTodayString());
+  
+  if (todayTasks.length === 0) {
     emptyState.style.display = 'flex';
   } else {
     emptyState.style.display = 'none';
     
-    state.tasks.forEach(task => {
+    todayTasks.forEach(task => {
       const li = document.createElement('li');
       li.className = 'task-item';
       li.dataset.id = task.id;
@@ -269,12 +309,22 @@ function escapeHTML(str) {
 // --- TASK INTERACTIONS ---
 function addTask(text) {
   const category = taskCategorySelect ? taskCategorySelect.value : 'discipline';
+  const frequency = taskFrequencySelect ? taskFrequencySelect.value : 'daily';
+  
+  let targetDate = null;
+  if (frequency === 'today') {
+    targetDate = getTodayString();
+  } else if (frequency === 'tomorrow') {
+    targetDate = getTomorrowString();
+  }
   
   const newTask = {
     id: Date.now().toString(),
     text: text.trim(),
     completed: false,
-    category: category
+    category: category,
+    frequency: frequency,
+    targetDate: targetDate
   };
   
   state.tasks.push(newTask);
@@ -325,6 +375,13 @@ function toggleTask(id, completed) {
           }
         }
       }
+
+      // Revert streak if we unchecked today's completed status
+      const todayStr = getTodayString();
+      if (state.lastCompletedDate === todayStr) {
+        state.streak = Math.max(0, state.streak - 1);
+        state.lastCompletedDate = getYesterdayString(todayStr);
+      }
     }
     
     saveState();
@@ -347,18 +404,23 @@ function deleteTask(id, element) {
     state.tasks = state.tasks.filter(t => t.id !== id);
     saveState();
     renderTasks();
+    checkVengeanceProtocol();
   }, 250);
 }
 
 // --- PROGRESS & HUD SYNC ---
 function updateProgressHUD() {
-  const total = state.tasks.length;
-  const completed = state.tasks.filter(t => t.completed).length;
+  const todayTasks = getTasksForDate(getTodayString());
+  const total = todayTasks.length;
+  const completed = todayTasks.filter(t => t.completed).length;
   
   // Counters
   taskCounter.textContent = `${completed}/${total} SECURED`;
   securedValue.textContent = `${state.totalSecured} SECURED`;
   streakValue.textContent = `${state.streak} ${state.streak === 1 ? 'DAY' : 'DAYS'}`;
+  if (maxStreakValue) {
+    maxStreakValue.textContent = `${state.maxStreak || 0} ${(state.maxStreak || 0) === 1 ? 'DAY' : 'DAYS'}`;
+  }
   
   // Percentage & Label
   const ratio = total > 0 ? completed / total : 0;
@@ -379,11 +441,11 @@ function updateProgressHUD() {
   // Update today's history entry in real-time
   const todayStr = getTodayString();
   if (total > 0) {
-    if (completed === total) {
-      state.history[todayStr] = 'completed';
-    } else {
-      state.history[todayStr] = 'failed';
-    }
+    const histStatus = completed === total ? 'completed' : 'failed';
+    state.history[todayStr] = {
+      status: histStatus,
+      tasks: todayTasks.map(t => ({ text: t.text, completed: t.completed, category: t.category }))
+    };
   } else {
     // If no tasks, today has no activity status
     delete state.history[todayStr];
@@ -506,11 +568,12 @@ function runCelebrationLoop() {
 
 function triggerCelebration() {
   // Calculate Mission Report stats
-  const total = state.tasks.length;
+  const todayTasks = getTasksForDate(getTodayString());
+  const total = todayTasks.length;
   const xpEarned = total * 25;
   
   const categoryCounts = { mind: 0, body: 0, discipline: 0, career: 0 };
-  state.tasks.forEach(t => {
+  todayTasks.forEach(t => {
     if (t.completed && t.category) {
       categoryCounts[t.category]++;
     }
@@ -597,8 +660,9 @@ function speakBatmanVoice() {
 
 // Check if all objectives are completed
 function checkVengeanceProtocol() {
-  const total = state.tasks.length;
-  const completed = state.tasks.filter(t => t.completed).length;
+  const todayTasks = getTasksForDate(getTodayString());
+  const total = todayTasks.length;
+  const completed = todayTasks.filter(t => t.completed).length;
   
   if (total > 0 && completed === total) {
     const todayStr = getTodayString();
@@ -612,6 +676,9 @@ function checkVengeanceProtocol() {
       } else {
         state.streak = 1; // start new streak
       }
+      
+      if (state.maxStreak === undefined) state.maxStreak = 0;
+      state.maxStreak = Math.max(state.maxStreak, state.streak);
       
       state.lastCompletedDate = todayStr;
       saveState();
@@ -725,8 +792,14 @@ btnReboot.addEventListener('click', () => {
   batAudio.playWarning();
   const confirmWipe = confirm("SYS WARNING: DO YOU WISH TO PURGE COMPLETED OBJECTIVES FROM YOUR LOGS?");
   if (confirmWipe) {
-    // Keep uncompleted, discard completed
-    state.tasks = state.tasks.filter(t => !t.completed);
+    // Keep uncompleted, discard completed for today
+    state.tasks = state.tasks.filter(t => {
+      const isToday = !t.frequency || t.frequency === 'daily' || t.targetDate === getTodayString();
+      if (isToday) {
+        return !t.completed;
+      }
+      return true; // Keep tasks not for today
+    });
     saveState();
     renderTasks();
   }
@@ -737,6 +810,13 @@ btnOverlayClose.addEventListener('click', () => {
   batAudio.playClick();
   stopCelebration();
 });
+
+if (btnDayReportClose) {
+  btnDayReportClose.addEventListener('click', () => {
+    dayReportOverlay.style.display = 'none';
+    batAudio.playClick();
+  });
+}
 
 // Click quote panel to cycle quotes
 quoteContainer.addEventListener('click', () => {
@@ -771,8 +851,8 @@ if ('speechSynthesis' in window) {
 let currentCalDate = new Date();
 
 function applyHistoryClass(element, dateStr) {
-  if (state.history && state.history[dateStr]) {
-    const status = state.history[dateStr];
+  const status = getHistoryStatus(dateStr);
+  if (status) {
     if (status === 'completed') {
       element.classList.add('completed');
       element.title = "Patrol Secured 🦇";
@@ -781,6 +861,60 @@ function applyHistoryClass(element, dateStr) {
       element.title = "Patrol Missed ⚠️";
     }
   }
+}
+
+function showDayReport(dateStr) {
+  const todayStr = getTodayString();
+  if (dateStr > todayStr) {
+    batAudio.playWarning();
+    return;
+  }
+  
+  if (dayReportTitle) {
+    dayReportTitle.textContent = `PATROL LOG: ${dateStr}`;
+  }
+  
+  const tasksList = document.getElementById('day-report-tasks-list');
+  if (tasksList) tasksList.innerHTML = '';
+  
+  if (dayReportStatus) {
+    const entry = state.history && state.history[dateStr] ? state.history[dateStr] : null;
+    const status = getHistoryStatus(dateStr);
+    
+    if (status) {
+      if (status === 'completed') {
+        dayReportStatus.textContent = 'SECURED';
+        dayReportStatus.style.color = 'var(--color-yellow)';
+      } else {
+        dayReportStatus.textContent = 'MISSED';
+        dayReportStatus.style.color = '#ff3333';
+      }
+      
+      if (tasksList && typeof entry === 'object' && entry.tasks) {
+        entry.tasks.forEach(t => {
+          const li = document.createElement('li');
+          li.style.padding = '8px 0';
+          li.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+          li.style.color = t.completed ? 'var(--color-text-main)' : 'var(--color-text-muted)';
+          li.style.display = 'flex';
+          li.style.alignItems = 'center';
+          li.style.gap = '10px';
+          li.style.fontFamily = 'var(--font-ui)';
+          li.style.fontSize = '0.9rem';
+          li.innerHTML = `<i class="fa-solid ${t.completed ? 'fa-check' : 'fa-xmark'}" style="color: ${t.completed ? 'var(--color-yellow)' : '#ff3333'}; width: 16px; text-align: center;"></i> <span>${t.text}</span>`;
+          tasksList.appendChild(li);
+        });
+      }
+    } else {
+      dayReportStatus.textContent = 'NO ACTIVITY';
+      dayReportStatus.style.color = 'var(--color-text-main)';
+    }
+  }
+  
+  if (dayReportOverlay) {
+    dayReportOverlay.style.display = 'flex';
+  }
+  batAudio.playClick();
 }
 
 function renderCalendar() {
@@ -809,6 +943,8 @@ function renderCalendar() {
     const cell = document.createElement('div');
     cell.className = 'cal-day-cell other-month';
     cell.textContent = dayNum;
+    cell.style.cursor = 'pointer';
+    cell.addEventListener('click', () => showDayReport(dateStr));
     applyHistoryClass(cell, dateStr);
     calendarDaysGrid.appendChild(cell);
   }
@@ -821,6 +957,8 @@ function renderCalendar() {
     const cell = document.createElement('div');
     cell.className = 'cal-day-cell';
     cell.textContent = day;
+    cell.style.cursor = 'pointer';
+    cell.addEventListener('click', () => showDayReport(dateStr));
 
     if (dateStr === todayStr) {
       cell.classList.add('today');
@@ -841,6 +979,8 @@ function renderCalendar() {
     const cell = document.createElement('div');
     cell.className = 'cal-day-cell other-month';
     cell.textContent = day;
+    cell.style.cursor = 'pointer';
+    cell.addEventListener('click', () => showDayReport(dateStr));
     applyHistoryClass(cell, dateStr);
     calendarDaysGrid.appendChild(cell);
   }
@@ -1021,7 +1161,7 @@ function renderAnalytics() {
   
   let successDays = 0;
   dates.forEach(d => {
-    if (state.history[d] === 'completed') {
+    if (getHistoryStatus(d) === 'completed') {
       successDays++;
     }
   });

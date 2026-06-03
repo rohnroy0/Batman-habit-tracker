@@ -8,8 +8,8 @@
   <!-- CSS Stylesheet -->
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script type="module" crossorigin src="/assets/index-DI1uyoS1.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-CTdMnnze.css">
+  <script type="module" crossorigin src="/assets/index-RtExMNa6.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-B5FH9o5y.css">
 </head>
 <body>
 
@@ -51,6 +51,29 @@
       </div>
       
       <button class="overlay-btn" id="btn-overlay-close">Resume Patrol</button>
+    </div>
+  </div>
+
+  <div id="day-report-overlay" class="day-report-overlay" style="display: none;">
+    <div class="overlay-content">
+      <div class="overlay-logo" style="margin-bottom: 1rem;">
+        <svg viewBox="0 0 600 300" style="width: 100px; height: 50px;">
+          <path d="M 256,213 C 245,181 206,187 234,262 147,181 169,71.2 233,18 220,56 235,81 283,88 285,78.7 286,69.3 288,60 289,61.3 290,62.7 291,64 291,64 297,63 300,63 303,63 309,64 309,64 310,62.7 311,61.3 312,60 314,69.3 315,78.7 317,88 365,82 380,56 367,18 431,71 453,181 366,262 394,187 356,181 344,213 328,185 309,184 300,284 291,184 272,185 256,213 Z" fill="var(--color-primary)"/>
+        </svg>
+      </div>
+      <h1 class="overlay-title" id="day-report-title" style="font-size: 1.5rem;">PATROL LOG</h1>
+      
+      <div class="mission-report-dashboard" style="margin-top: 1rem;">
+        <div class="report-row report-status">
+          <div class="report-label">STATUS:</div>
+          <div class="report-value highlight" id="day-report-status">NO ACTIVITY</div>
+        </div>
+        <ul id="day-report-tasks-list" style="list-style: none; padding: 0; margin-top: 1rem; text-align: left; max-height: 200px; overflow-y: auto;">
+          <!-- Dynamically populated -->
+        </ul>
+      </div>
+      
+      <button class="overlay-btn" id="btn-day-report-close" style="margin-top: 2rem;">Close Log</button>
     </div>
   </div>
 
@@ -102,6 +125,12 @@
             <input type="text" class="task-input" id="task-input" placeholder="INITIATE NEW OBJECTIVE..." autocomplete="off" required>
             <i class="fa-solid fa-terminal task-input-icon"></i>
           </div>
+          <!-- Frequency Select -->
+          <select class="task-category-select" id="task-frequency" required>
+            <option value="today">📅 TODAY</option>
+            <option value="tomorrow">🗓️ TOMORROW</option>
+            <option value="daily">🔄 DAILY (HABIT)</option>
+          </select>
           <!-- RPG Skill Category Select -->
           <select class="task-category-select" id="task-category" required>
             <option value="mind">🧠 MIND (Read/Study)</option>
@@ -176,6 +205,33 @@
           <!-- Dynamically populated in JS -->
         </div>
       </section>
+
+      <!-- Bottom Statistics Bar (Moved to fill left area) -->
+      <div class="stats-footer">
+        <div class="stat-box">
+          <i class="fa-solid fa-fire stat-icon"></i>
+          <div class="stat-info">
+            <div class="stat-value" id="streak-value">0 DAYS</div>
+            <div class="stat-label">PATROL STREAK</div>
+          </div>
+        </div>
+
+        <div class="stat-box">
+          <i class="fa-solid fa-crown stat-icon" style="color: #ffd700;"></i>
+          <div class="stat-info">
+            <div class="stat-value" id="max-streak-value">0 DAYS</div>
+            <div class="stat-label">MAX STREAK</div>
+          </div>
+        </div>
+
+        <div class="stat-box">
+          <i class="fa-solid fa-bullseye stat-icon"></i>
+          <div class="stat-info">
+            <div class="stat-value" id="secured-value">0 secured</div>
+            <div class="stat-label">TOTAL OBJECTIVES</div>
+          </div>
+        </div>
+      </div>
 
       </div> <!-- End Left Column Wrapper -->
 
@@ -292,24 +348,7 @@
 
     </main>
 
-    <!-- Bottom Statistics Bar -->
-    <footer class="stats-footer">
-      <div class="stat-box">
-        <i class="fa-solid fa-fire stat-icon"></i>
-        <div class="stat-info">
-          <div class="stat-value" id="streak-value">0 DAYS</div>
-          <div class="stat-label">PATROL STREAK</div>
-        </div>
-      </div>
 
-      <div class="stat-box">
-        <i class="fa-solid fa-bullseye stat-icon"></i>
-        <div class="stat-info">
-          <div class="stat-value" id="secured-value">0 secured</div>
-          <div class="stat-label">TOTAL OBJECTIVES</div>
-        </div>
-      </div>
-    </footer>
 
   </div>
 
