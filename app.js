@@ -1373,23 +1373,25 @@ function displayLoginRandomQuote() {
 }
 
 async function handleAuthChange(session) {
-  // Always load state so that the mute preference is retrieved and synced immediately
-  loadState();
-
   if (session) {
-    currentUser = session.user;
-    // User is logged in
+    currentUser = session.user; // Set BEFORE loadState so it has the user ID
+
+    // Fetch data from Supabase BEFORE rendering anything
+    await loadState();
+
+    // User is logged in - now show UI
     loginView.style.display = 'none';
     dashboardView.style.display = 'block';
     userProfile.style.display = 'flex';
-    
+
     stopLoginParticles();
-    
+
     // Set user profile info
     const userMetadata = session.user.user_metadata;
     userAvatar.src = userMetadata.avatar_url || 'https://via.placeholder.com/32?text=B';
     userName.textContent = userMetadata.full_name || 'VIGILANTE';
-    
+
+    // Render with loaded state
     renderTasks();
     displayRandomQuote();
     displayTerminalQuote();
@@ -1404,7 +1406,7 @@ async function handleAuthChange(session) {
     dashboardView.style.display = 'none';
     loginView.style.display = 'flex';
     userProfile.style.display = 'none';
-    
+
     displayLoginRandomQuote();
     initLoginParticles();
   }
