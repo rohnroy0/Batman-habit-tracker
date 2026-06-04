@@ -75,6 +75,11 @@ async function loadState() {
     .eq('id', currentUser.id)
     .single();
 
+  if (error && error.code !== 'PGRST116') {
+    console.error("Error fetching state:", error);
+    return; // Don't wipe the DB if there's a network/auth error!
+  }
+
   if (data && data.state_data) {
     try {
       state = { ...state, ...data.state_data };
@@ -92,9 +97,9 @@ async function loadState() {
     } catch (e) {
       console.error("Error parsing state data...", e);
     }
-  } else {
-    // No data yet, initialize the default in the DB
-    saveState();
+  } else if (error && error.code === 'PGRST116') {
+    // No data yet (new user), initialize the default in the DB
+    await saveState();
   }
 
   // Handle muted state sync in audio controller
@@ -139,10 +144,10 @@ async function loadState() {
       task.completed = false;
     });
     state.lastOpenedDate = todayStr;
-    saveState();
+    await saveState();
   } else if (!state.lastOpenedDate) {
     state.lastOpenedDate = todayStr;
-    saveState();
+    await saveState();
   }
 }
 
@@ -923,17 +928,42 @@ function showDayReport(dateStr) {
     const entry = state.history && state.history[dateStr] ? state.history[dateStr] : null;
     const status = getHistoryStatus(dateStr);
     
-    if (status) {
-      if (status === 'completed') {
-        dayReportStatus.textContent = 'SECURED';
-        dayReportStatus.style.color = 'var(--color-yellow)';
+    if (status || dateStr === todayStr) {
+      let displayStatus = '';
+      let displayColor = '';
+      let tasksToRender = [];
+      
+      if (dateStr === todayStr) {
+        const todayTasks = getTasksForDate(todayStr);
+        tasksToRender = todayTasks;
+        const total = todayTasks.length;
+        const completed = todayTasks.filter(t => t.completed).length;
+        
+        if (total > 0 && total === completed) {
+          displayStatus = 'SECURED';
+          displayColor = 'var(--color-yellow)';
+        } else {
+          displayStatus = 'IN PROGRESS';
+          displayColor = 'var(--color-yellow)';
+        }
       } else {
-        dayReportStatus.textContent = 'MISSED';
-        dayReportStatus.style.color = '#ff3333';
+        if (status === 'completed') {
+          displayStatus = 'SECURED';
+          displayColor = 'var(--color-yellow)';
+        } else {
+          displayStatus = 'MISSED';
+          displayColor = '#ff3333';
+        }
+        if (typeof entry === 'object' && entry.tasks) {
+          tasksToRender = entry.tasks;
+        }
       }
       
-      if (tasksList && typeof entry === 'object' && entry.tasks) {
-        entry.tasks.forEach(t => {
+      dayReportStatus.textContent = displayStatus;
+      dayReportStatus.style.color = displayColor;
+      
+      if (tasksList && tasksToRender.length > 0) {
+        tasksToRender.forEach(t => {
           const li = document.createElement('li');
           li.style.padding = '8px 0';
           li.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
@@ -949,7 +979,7 @@ function showDayReport(dateStr) {
       }
     } else {
       dayReportStatus.textContent = 'NO ACTIVITY';
-      dayReportStatus.style.color = 'var(--color-text-main)';
+      dayReportStatus.style.color = 'var(--color-text-muted)';
     }
   }
   
@@ -1227,9 +1257,6 @@ function renderAnalytics() {
 
 // --- AUTH & STARTUP LOGIC ---
 async function initApp() {
-  // Check active session
-  const { data: { session } } = await supabase.auth.getSession();
-  
   // Listen for auth changes
   supabase.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
@@ -1238,8 +1265,6 @@ async function initApp() {
       await handleAuthChange(null);
     }
   });
-  
-  await handleAuthChange(session);
 }
 
 // --- LOGIN BACKGROUND PARTICLES ---
