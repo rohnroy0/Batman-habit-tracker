@@ -8,10 +8,89 @@
   <!-- CSS Stylesheet -->
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script type="module" crossorigin src="/assets/index-RtExMNa6.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-B5FH9o5y.css">
+  <script type="module" crossorigin src="/assets/index-Czo4L3M-.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-Bg6SOkHL.css">
 </head>
 <body>
+
+  <!-- Login View -->
+  <div id="login-view" class="login-container" style="display: none;">
+    <!-- Visual background effects -->
+    <canvas id="login-particles"></canvas>
+    <div class="login-scanlines"></div>
+    
+    <!-- Sound Toggle in Top Corner -->
+    <button id="btn-login-sound" class="login-sound-btn" title="Toggle audio transmission">
+      <i class="fa-solid fa-volume-high" id="login-sound-icon"></i>
+      <span id="login-sound-text">SOUND ON</span>
+    </button>
+    
+    <!-- Centered Premium Mission Briefing Card -->
+    <div class="mission-briefing-card">
+      <div class="card-borders">
+        <div class="border-corner top-left"></div>
+        <div class="border-corner top-right"></div>
+        <div class="border-corner bottom-left"></div>
+        <div class="border-corner bottom-right"></div>
+      </div>
+      
+      <!-- Top Section -->
+      <div class="briefing-top">
+        <div class="animated-bat-logo">
+          <svg viewBox="0 0 600 300" class="bat-logo-svg">
+            <path d="M 256,213 C 245,181 206,187 234,262 147,181 169,71.2 233,18 220,56 235,81 283,88 285,78.7 286,69.3 288,60 289,61.3 290,62.7 291,64 291,64 297,63 300,63 303,63 309,64 309,64 310,62.7 311,61.3 312,60 314,69.3 315,78.7 317,88 365,82 380,56 367,18 431,71 453,181 366,262 394,187 356,181 344,213 328,185 309,184 300,284 291,184 272,185 256,213 Z" fill="var(--color-yellow)"/>
+          </svg>
+        </div>
+        <h1 class="briefing-brand">Gotham <span>Grit</span></h1>
+        <p class="briefing-subtitle">Every legend begins with a single mission.</p>
+      </div>
+      
+      <!-- Mission Briefing Panel -->
+      <div class="briefing-panel">
+        <div class="panel-header">
+          <span class="panel-pulse"></span>
+          <span class="panel-title">MISSION BRIEFING</span>
+        </div>
+        <div class="panel-content">
+          <p class="briefing-text line-1">The city doesn't need heroes.</p>
+          <p class="briefing-text line-2">It needs people who show up,</p>
+          <p class="briefing-text line-3">even when they don't feel like it.</p>
+          <p class="briefing-text line-4">Your journey starts today.</p>
+        </div>
+        <ul class="mission-objectives">
+          <li class="objective-item"><span class="obj-check">✓</span> Build Discipline</li>
+          <li class="objective-item"><span class="obj-check">✓</span> Track Progress</li>
+          <li class="objective-item"><span class="obj-check">✓</span> Become Better Than Yesterday</li>
+        </ul>
+      </div>
+      
+      <!-- Quote Section -->
+      <div class="briefing-quote">
+        <div class="quote-header">BATCOMPUTER // INSPIRATIONAL.FEED</div>
+        <p class="quote-text" id="login-quote-text">"Why do we fall? So that we can learn to pick ourselves up."</p>
+        <p class="quote-author" id="login-quote-author">— Alfred Pennyworth</p>
+      </div>
+      
+      <!-- Authentication Section -->
+      <div class="briefing-auth">
+        <button id="btn-enter-cave" class="btn-enter-cave">
+          <span class="btn-bracket-left">[</span>
+          <span class="btn-label">ENTER THE CAVE</span>
+          <span class="btn-bracket-right">]</span>
+        </button>
+        <div class="google-continue-label">Continue with Google</div>
+      </div>
+      
+      <!-- Footer Info -->
+      <div class="briefing-footer">
+        <span class="terminal-footer-label">SYS.STATUS // ACTIVE</span>
+        <span class="footer-moto">"Discipline over motivation."</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard View Wrapper -->
+  <div id="dashboard-view" style="display: none;">
 
   <!-- Celebration Layers -->
   <canvas id="celebration-canvas"></canvas>
@@ -97,6 +176,20 @@
 
       <!-- Settings & Utilities -->
       <div class="system-controls">
+        <div id="user-profile" class="user-profile-hud" style="display: none; flex-direction: column; align-items: flex-end; gap: 10px; background: none; border: none; padding: 0; margin-right: 0;">
+          <div style="display: flex; align-items: center; gap: 12px; background: rgba(0, 0, 0, 0.6); padding: 6px 15px 6px 6px; border-radius: 30px; border: 1px solid rgba(255, 179, 0, 0.4); box-shadow: 0 0 10px rgba(255, 179, 0, 0.1);">
+            <img id="user-avatar" src="" alt="Profile" class="user-avatar">
+            <span id="user-name" class="user-name"></span>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button id="btn-hard-reset" class="btn-batman-action alert" title="Erase all data and start over">
+              <i class="fa-solid fa-skull"></i> COMPLETE CLEAN
+            </button>
+            <button id="btn-logout" class="btn-batman-action" title="Log Out">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i> LOGOUT
+            </button>
+          </div>
+        </div>
         <button id="btn-sound" class="control-btn">
           <i class="fa-solid fa-volume-high" id="sound-icon"></i> <span id="sound-text">SOUND ON</span>
         </button>
@@ -351,6 +444,7 @@
 
 
   </div>
+  </div> <!-- End Dashboard View -->
 
   <!-- Application Controller script (must be ES module for imports) -->
 </body>

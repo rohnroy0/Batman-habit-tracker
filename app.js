@@ -1,5 +1,6 @@
 // app.js - Gotham Grit Application Controller
 import batAudio from './audio.js';
+import { supabase } from './supabase.js';
 
 // --- CONFIGURATION & QUOTES ---
 const BATMAN_QUOTES = [
@@ -56,6 +57,8 @@ let state = {
   }
 };
 
+let currentUser = null; // Store current authenticated user
+
 function getHistoryStatus(dateStr) {
   if (!state.history || !state.history[dateStr]) return null;
   const entry = state.history[dateStr];
@@ -63,12 +66,18 @@ function getHistoryStatus(dateStr) {
 }
 
 // Initialize State
-function loadState() {
-  const saved = localStorage.getItem('gotham_grit_state');
-  if (saved) {
+async function loadState() {
+  if (!currentUser) return;
+
+  const { data, error } = await supabase
+    .from('gotham_state')
+    .select('state_data')
+    .eq('id', currentUser.id)
+    .single();
+
+  if (data && data.state_data) {
     try {
-      const parsed = JSON.parse(saved);
-      state = { ...state, ...parsed };
+      state = { ...state, ...data.state_data };
       if (!state.history) state.history = {};
       if (state.maxStreak === undefined) state.maxStreak = 0;
       state.maxStreak = Math.max(state.maxStreak, state.streak || 0);
@@ -81,15 +90,11 @@ function loadState() {
         };
       }
     } catch (e) {
-      console.error("Error loading state, resetting...", e);
-      state.history = {};
-      state.skills = {
-        mind: { xp: 0, level: 1 },
-        body: { xp: 0, level: 1 },
-        discipline: { xp: 0, level: 1 },
-        career: { xp: 0, level: 1 }
-      };
+      console.error("Error parsing state data...", e);
     }
+  } else {
+    // No data yet, initialize the default in the DB
+    saveState();
   }
 
   // Handle muted state sync in audio controller
@@ -141,8 +146,19 @@ function loadState() {
   }
 }
 
-function saveState() {
-  localStorage.setItem('gotham_grit_state', JSON.stringify(state));
+async function saveState() {
+  if (!currentUser) return;
+  const { error } = await supabase
+    .from('gotham_state')
+    .upsert({ 
+      id: currentUser.id, 
+      state_data: state, 
+      updated_at: new Date().toISOString() 
+    });
+  
+  if (error) {
+    console.error("Error saving state to Supabase:", error);
+  }
 }
 
 // --- UTILITIES ---
@@ -177,6 +193,18 @@ function calculateRank(total) {
 }
 
 // --- DOM ELEMENTS ---
+const loginView = document.getElementById('login-view');
+const dashboardView = document.getElementById('dashboard-view');
+const btnEnterCave = document.getElementById('btn-enter-cave');
+const loginBtnSound = document.getElementById('btn-login-sound');
+const loginSoundIcon = document.getElementById('login-sound-icon');
+const loginSoundText = document.getElementById('login-sound-text');
+const userProfile = document.getElementById('user-profile');
+const userAvatar = document.getElementById('user-avatar');
+const userName = document.getElementById('user-name');
+const btnLogout = document.getElementById('btn-logout');
+const btnHardReset = document.getElementById('btn-hard-reset');
+
 const todoForm = document.getElementById('todo-form');
 const taskInput = document.getElementById('task-input');
 const todoList = document.getElementById('todo-list');
@@ -692,14 +720,28 @@ function checkVengeanceProtocol() {
 
 // --- UTILITY CONTROLS ---
 function updateSoundButtonUI() {
-  if (state.soundMuted) {
-    soundIcon.className = "fa-solid fa-volume-xmark";
-    soundText.textContent = "SOUND OFF";
-    btnSound.classList.remove('active');
-  } else {
-    soundIcon.className = "fa-solid fa-volume-high";
-    soundText.textContent = "SOUND ON";
-    btnSound.classList.add('active');
+  const isMuted = state.soundMuted;
+  if (soundIcon && soundText && btnSound) {
+    if (isMuted) {
+      soundIcon.className = "fa-solid fa-volume-xmark";
+      soundText.textContent = "SOUND OFF";
+      btnSound.classList.remove('active');
+    } else {
+      soundIcon.className = "fa-solid fa-volume-high";
+      soundText.textContent = "SOUND ON";
+      btnSound.classList.add('active');
+    }
+  }
+  if (loginSoundIcon && loginSoundText && loginBtnSound) {
+    if (isMuted) {
+      loginSoundIcon.className = "fa-solid fa-volume-xmark";
+      loginSoundText.textContent = "SOUND OFF";
+      loginBtnSound.classList.add('muted');
+    } else {
+      loginSoundIcon.className = "fa-solid fa-volume-high";
+      loginSoundText.textContent = "SOUND ON";
+      loginBtnSound.classList.remove('muted');
+    }
   }
 }
 
@@ -1183,13 +1225,218 @@ function renderAnalytics() {
   analyticsTotalXp.textContent = totalXp;
 }
 
-// --- Run Startup ---
-loadState();
-renderTasks();
-displayRandomQuote();
-displayTerminalQuote();
-startPatrolCountdown();
-renderCalendar();
-renderArmory();
-renderSkills();
-renderAnalytics();
+// --- AUTH & STARTUP LOGIC ---
+async function initApp() {
+  // Check active session
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  // Listen for auth changes
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+      await handleAuthChange(session);
+    } else if (event === 'SIGNED_OUT') {
+      await handleAuthChange(null);
+    }
+  });
+  
+  await handleAuthChange(session);
+}
+
+// --- LOGIN BACKGROUND PARTICLES ---
+let loginParticlesActive = false;
+let loginParticlesList = [];
+let loginParticlesCanvas = null;
+let loginParticlesCtx = null;
+let resizeListener = null;
+
+class LoginParticle {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.reset();
+    this.y = Math.random() * canvas.height;
+  }
+  
+  reset() {
+    this.x = Math.random() * this.canvas.width;
+    this.y = this.canvas.height + Math.random() * 20;
+    this.size = 1 + Math.random() * 2.2;
+    this.speedX = -0.4 + Math.random() * 0.8;
+    this.speedY = -(0.3 + Math.random() * 0.9);
+    this.opacity = 0.15 + Math.random() * 0.45;
+    this.color = Math.random() > 0.45 ? 'rgba(255, 179, 0, ' : 'rgba(226, 232, 240, ';
+  }
+  
+  update() {
+    this.x += this.speedX;
+    this.y += this.speedY;
+    
+    if (this.y < -10 || this.x < -10 || this.x > this.canvas.width + 10) {
+      this.reset();
+    }
+  }
+  
+  draw(ctx) {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = this.color + this.opacity + ')';
+    ctx.fill();
+  }
+}
+
+function initLoginParticles() {
+  loginParticlesCanvas = document.getElementById('login-particles');
+  if (!loginParticlesCanvas) return;
+  
+  loginParticlesCtx = loginParticlesCanvas.getContext('2d');
+  
+  const resizeCanvas = () => {
+    if (loginParticlesCanvas) {
+      loginParticlesCanvas.width = window.innerWidth;
+      loginParticlesCanvas.height = window.innerHeight;
+    }
+  };
+  resizeCanvas();
+  
+  if (!resizeListener) {
+    resizeListener = resizeCanvas;
+    window.addEventListener('resize', resizeListener);
+  }
+  
+  loginParticlesList = [];
+  for (let i = 0; i < 55; i++) {
+    loginParticlesList.push(new LoginParticle(loginParticlesCanvas));
+  }
+  
+  if (!loginParticlesActive) {
+    loginParticlesActive = true;
+    runLoginParticlesLoop();
+  }
+}
+
+function runLoginParticlesLoop() {
+  if (!loginParticlesActive || !loginParticlesCtx || !loginParticlesCanvas) return;
+  
+  loginParticlesCtx.clearRect(0, 0, loginParticlesCanvas.width, loginParticlesCanvas.height);
+  
+  loginParticlesList.forEach(particle => {
+    particle.update();
+    particle.draw(loginParticlesCtx);
+  });
+  
+  requestAnimationFrame(runLoginParticlesLoop);
+}
+
+function stopLoginParticles() {
+  loginParticlesActive = false;
+  if (resizeListener) {
+    window.removeEventListener('resize', resizeListener);
+    resizeListener = null;
+  }
+}
+
+// Choice Selection for Login Random Quote
+function displayLoginRandomQuote() {
+  const loginQuoteText = document.getElementById('login-quote-text');
+  const loginQuoteAuthor = document.getElementById('login-quote-author');
+  if (!loginQuoteText || !loginQuoteAuthor) return;
+  
+  const randIndex = Math.floor(Math.random() * BATMAN_QUOTES.length);
+  const quote = BATMAN_QUOTES[randIndex];
+  
+  loginQuoteText.textContent = `"${quote.text}"`;
+  loginQuoteAuthor.textContent = `— ${quote.author}`;
+}
+
+async function handleAuthChange(session) {
+  // Always load state so that the mute preference is retrieved and synced immediately
+  loadState();
+
+  if (session) {
+    currentUser = session.user;
+    // User is logged in
+    loginView.style.display = 'none';
+    dashboardView.style.display = 'block';
+    userProfile.style.display = 'flex';
+    
+    stopLoginParticles();
+    
+    // Set user profile info
+    const userMetadata = session.user.user_metadata;
+    userAvatar.src = userMetadata.avatar_url || 'https://via.placeholder.com/32?text=B';
+    userName.textContent = userMetadata.full_name || 'VIGILANTE';
+    
+    renderTasks();
+    displayRandomQuote();
+    displayTerminalQuote();
+    startPatrolCountdown();
+    renderCalendar();
+    renderArmory();
+    renderSkills();
+    renderAnalytics();
+  } else {
+    currentUser = null;
+    // User is not logged in
+    dashboardView.style.display = 'none';
+    loginView.style.display = 'flex';
+    userProfile.style.display = 'none';
+    
+    displayLoginRandomQuote();
+    initLoginParticles();
+  }
+}
+
+// Bind Auth & Login Sound Buttons
+if (btnEnterCave) {
+  btnEnterCave.addEventListener('click', async () => {
+    batAudio.playClick();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+    });
+    if (error) console.error("Error logging in:", error.message);
+  });
+}
+
+if (loginBtnSound) {
+  loginBtnSound.addEventListener('click', () => {
+    const isMuted = batAudio.toggleMute();
+    state.soundMuted = isMuted;
+    saveState();
+    updateSoundButtonUI();
+    batAudio.playClick();
+  });
+}
+
+if (btnLogout) {
+  btnLogout.addEventListener('click', async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error("Error logging out:", error.message);
+  });
+}
+
+if (btnHardReset) {
+  btnHardReset.addEventListener('click', async () => {
+    if (confirm("SYS WARNING: THIS WILL PURGE ALL YOUR PROGRESS AND OBJECTIVES. INITIATE COMPLETE CLEAN?")) {
+      state = {
+        tasks: [],
+        streak: 0,
+        totalSecured: 0,
+        lastCompletedDate: null,
+        lastOpenedDate: null,
+        soundMuted: false,
+        history: {},
+        skills: {
+          mind: { xp: 0, level: 1 },
+          body: { xp: 0, level: 1 },
+          discipline: { xp: 0, level: 1 },
+          career: { xp: 0, level: 1 }
+        }
+      };
+      await saveState();
+      window.location.reload();
+    }
+  });
+}
+
+// Start the app
+initApp();
+
