@@ -723,11 +723,11 @@ function updateSoundButtonUI() {
   const isMuted = state.soundMuted;
   if (soundIcon && soundText && btnSound) {
     if (isMuted) {
-      soundIcon.className = "fa-solid fa-volume-xmark";
+      soundIcon.className = "fa-solid fa-volume-xmark cmd-icon";
       soundText.textContent = "SOUND OFF";
       btnSound.classList.remove('active');
     } else {
-      soundIcon.className = "fa-solid fa-volume-high";
+      soundIcon.className = "fa-solid fa-volume-high cmd-icon";
       soundText.textContent = "SOUND ON";
       btnSound.classList.add('active');
     }

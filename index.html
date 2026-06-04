@@ -174,27 +174,36 @@
       </div>
 
       <!-- Settings & Utilities -->
-      <div class="system-controls">
-        <div id="user-profile" class="user-profile-hud" style="display: none; flex-direction: column; align-items: flex-end; gap: 10px; background: none; border: none; padding: 0; margin-right: 0;">
-          <div style="display: flex; align-items: center; gap: 12px; background: rgba(0, 0, 0, 0.6); padding: 6px 15px 6px 6px; border-radius: 30px; border: 1px solid rgba(255, 179, 0, 0.4); box-shadow: 0 0 10px rgba(255, 179, 0, 0.1);">
-            <img id="user-avatar" src="" alt="Profile" class="user-avatar">
-            <span id="user-name" class="user-name"></span>
-          </div>
-          <div style="display: flex; gap: 10px;">
-            <button id="btn-hard-reset" class="btn-batman-action alert" title="Erase all data and start over">
-              <i class="fa-solid fa-skull"></i> COMPLETE CLEAN
-            </button>
-            <button id="btn-logout" class="btn-batman-action" title="Log Out">
-              <i class="fa-solid fa-arrow-right-from-bracket"></i> LOGOUT
-            </button>
+      <div class="system-controls command-panel">
+        <div id="user-profile" class="agent-profile-card" style="display: none;">
+          <div class="agent-profile-inner">
+            <div class="agent-avatar-wrapper">
+              <img id="user-avatar" src="" alt="Profile" class="agent-avatar">
+              <div class="online-indicator"></div>
+            </div>
+            <div class="agent-details">
+              <div class="agent-name">AGENT: <span id="user-name"></span></div>
+              <div class="agent-status">STATUS: <span class="status-active">ACTIVE</span></div>
+              <div class="agent-clearance">CLEARANCE: <span class="clearance-level">ALPHA</span></div>
+            </div>
+            <div class="profile-scanline"></div>
           </div>
         </div>
-        <button id="btn-sound" class="control-btn">
-          <i class="fa-solid fa-volume-high" id="sound-icon"></i> <span id="sound-text">SOUND ON</span>
-        </button>
-        <button id="btn-reboot" class="control-btn">
-          <i class="fa-solid fa-arrows-rotate"></i> REBOOT PATROL
-        </button>
+        
+        <div class="command-stack">
+          <button id="btn-hard-reset" class="cmd-btn cmd-alert" title="Erase all data and start over">
+            <i class="fa-solid fa-skull cmd-icon"></i> <span class="cmd-text">COMPLETE CLEAN</span>
+          </button>
+          <button id="btn-reboot" class="cmd-btn cmd-primary">
+            <i class="fa-solid fa-arrows-rotate cmd-icon"></i> <span class="cmd-text">REBOOT PATROL</span>
+          </button>
+          <button id="btn-sound" class="cmd-btn cmd-primary">
+            <i class="fa-solid fa-volume-high cmd-icon" id="sound-icon"></i> <span class="cmd-text" id="sound-text">SOUND ON</span>
+          </button>
+          <button id="btn-logout" class="cmd-btn cmd-secondary" title="Log Out">
+            <i class="fa-solid fa-arrow-right-from-bracket cmd-icon"></i> <span class="cmd-text">LOGOUT</span>
+          </button>
+        </div>
       </div>
     </header>
 
